@@ -1387,6 +1387,16 @@ async function fetchReddit(subreddits) {
   return results.flat().slice(0, 40);
 }
 
+function buildPromptWithResearch(cat, redditPosts, trend, amazon, sample, researchSummary) {
+  const base = buildPrompt(cat, redditPosts, trend, amazon, sample);
+  if (!researchSummary) return base;
+  // Inject live research right after the category line
+  return base.replace(
+    `CATEGORY: "${cat}"`,
+    `CATEGORY: "${cat}"\n\nLIVE MARKET RESEARCH (just gathered from web search — use this as evidence):\n${researchSummary}`
+  );
+}
+
 function buildPrompt(cat, redditPosts, trend, amazon, sample) {
   const redditStr = redditPosts.length > 0
     ? redditPosts.map((p,i)=>`${i+1}. "${p.title}" (${p.score} upvotes)\n   URL: ${p.url}${p.text?'\n   Context: '+p.text:''}`).join('\n')
@@ -1429,45 +1439,51 @@ Draw on your training knowledge of the Indian market:
 - FSSAI supplement claim restrictions in India
 
 STRICT OUTPUT RULES:
+- YOU MUST RETURN EXACTLY 5 PRODUCT CONCEPTS — not 1, not 2, not 3. Exactly 5 complete objects in the array.
 - ALL concepts must be directly tied to the user's Google Trends and Amazon inputs above — this is non-negotiable
-- "whyThisWillWork" must cite a SPECIFIC data point from a named source — no generic statements like "consumers prefer natural products"
+- "whyThisWillWork" must cite a SPECIFIC data point from a named source — no generic statements
 - Every competitor must be a real, named Indian product with a real price
 - Each of the 5 insights must come from a DIFFERENT platform (Reddit, Amazon, Twitter, Nykaa, Google Trends — one each)
-- "noveltyStatement" must explain the mechanistic or segmentation difference — not just "no one has done this before"
-- "launchReadiness" must name the single real risk: regulatory (FSSAI), supply chain (ingredient availability), or clinical (efficacy proof needed)
-- Keep all text concise — brevity beats truncated JSON
+- "noveltyStatement" must explain the mechanistic or segmentation difference
+- "launchReadiness" must name the single real risk: regulatory (FSSAI), supply chain, or clinical
+- Keep ALL text fields SHORT and concise — this is critical to avoid truncation. Max 2 sentences per text field.
+- Do NOT stop after 1 or 2 products. Complete all 5 before closing the array with ]
 
-Return ONLY a raw JSON array. No markdown fences. No explanation. Start with [ end with ].
+Return ONLY a raw JSON array of EXACTLY 5 objects. No markdown fences. No explanation. Start with [ end with ].
 
 [
   {
-    "productName": "Specific tradeable name (e.g. 'SleepSync KSM-66 Gummy' not 'Sleep Gummy')",
-    "tagline": "One line: unique mechanism or benefit — not generic wellness language",
-    "description": "2 sentences: (1) what it is and exact mechanism, (2) the specific problem it solves and why existing products fail at this",
-    "whyThisWillWork": "2 sentences backed by SPECIFIC cited evidence: name the platform, the complaint pattern or stat, and the named competitor gap",
-    "noveltyStatement": "One sentence: what makes this mechanistically or segment-wise different from all existing Indian market products",
+    "productName": "Tradeable name",
+    "tagline": "One line benefit",
+    "description": "Max 2 sentences: mechanism + problem solved",
+    "whyThisWillWork": "Max 2 sentences with specific cited source and competitor gap",
+    "noveltyStatement": "One sentence: mechanistic or segment difference",
     "brand": "man-matters OR be-bodywise OR little-joys",
-    "brandRationale": "One sentence citing a specific brand strength or customer overlap that makes this brand the right home",
-    "targetConsumer": "Age range, gender, city tier, lifestyle context, and the exact trigger moment when they feel this pain",
-    "pricePoint": "Rs.XXX-Rs.YYY — one-line justification referencing a real competitor price",
+    "brandRationale": "One sentence",
+    "targetConsumer": "Age, gender, city tier, trigger moment",
+    "pricePoint": "Rs.XXX-Rs.YYY with one competitor reference",
     "format": "serum OR tablet OR gummy OR shampoo",
-    "keyIngredients": ["Ingredient 1 (dose) — specific mechanism", "Ingredient 2 (dose) — specific mechanism", "Ingredient 3 (dose) — specific mechanism", "Ingredient 4 (dose) — specific mechanism"],
-    "marketGap": "2 sentences: (1) what the top 3 competitors offer and their shared limitation, (2) the precise unmet need with evidence",
-    "launchReadiness": "The single biggest launch dependency — regulatory approval needed, key ingredient supply risk, or clinical validation required",
+    "keyIngredients": ["Ingredient 1 (dose) — mechanism", "Ingredient 2 (dose) — mechanism", "Ingredient 3 (dose) — mechanism"],
+    "marketGap": "Max 2 sentences: competitor limitation + unmet need",
+    "launchReadiness": "Single biggest risk in one sentence",
     "insights": [
-      {"source": "Reddit", "text": "Specific complaint or thread pattern from a named subreddit that proves this need exists", "url": "https://reddit.com/r/..."},
-      {"source": "Amazon", "text": "Specific recurring complaint pattern from Amazon India reviews in this category — name the product reviewed", "url": "https://amazon.in/s?k=..."},
-      {"source": "Twitter", "text": "Known consumer frustration theme on Twitter/X India with engagement signal", "url": "https://twitter.com/search?q=..."},
-      {"source": "Nykaa", "text": "Specific pricing gap, star-rating cluster, or review insight visible on Nykaa for this category", "url": "https://nykaa.com/search/result/?q=..."},
-      {"source": "Google Trends", "text": "Real rising search query or regional spike for this category in India with directional data", "url": "https://trends.google.com/trends/explore?q=...&geo=IN"}
+      {"source": "Reddit", "text": "Specific complaint from named subreddit", "url": "https://reddit.com/r/..."},
+      {"source": "Amazon", "text": "Specific review pattern, name the product", "url": "https://amazon.in/s?k=..."},
+      {"source": "Twitter", "text": "Consumer frustration theme on Twitter India", "url": "https://twitter.com/search?q=..."},
+      {"source": "Nykaa", "text": "Pricing gap or review insight on Nykaa", "url": "https://nykaa.com/search/result/?q=..."},
+      {"source": "Google Trends", "text": "Rising search query in India", "url": "https://trends.google.com/trends/explore?q=...&geo=IN"}
     ],
     "competitors": [
-      {"name": "Real product name", "brand": "Real Indian brand name", "price": "Rs.XXX", "whyWeBetter": "Specific formulation or positioning advantage — not vague", "url": "https://..."},
-      {"name": "Real product name", "brand": "Real Indian brand name", "price": "Rs.XXX", "whyWeBetter": "Specific advantage", "url": "https://..."},
-      {"name": "Real product name", "brand": "Real Indian brand name", "price": "Rs.XXX", "whyWeBetter": "Specific advantage", "url": "https://..."}
+      {"name": "Product name", "brand": "Indian brand", "price": "Rs.XXX", "whyWeBetter": "Specific advantage", "url": "https://..."},
+      {"name": "Product name", "brand": "Indian brand", "price": "Rs.XXX", "whyWeBetter": "Specific advantage", "url": "https://..."},
+      {"name": "Product name", "brand": "Indian brand", "price": "Rs.XXX", "whyWeBetter": "Specific advantage", "url": "https://..."}
     ],
     "scores": {"marketSize": 7, "competitionIntensity": 5, "brandAlignment": 8}
-  }
+  },
+  { second product — same structure },
+  { third product — same structure },
+  { fourth product — same structure },
+  { fifth product — same structure }
 ]`;
 }
 
@@ -1549,20 +1565,40 @@ async function startAnalysis() {
     const cat = CATEGORIES.find(c=>c.id===selectedCatId);
     redditPosts = await fetchReddit(cat.subreddits || []);
 
-    const prompt = buildPrompt(cat.label, redditPosts, trend||cat.trend, amazon||cat.amazon, sampleFileText);
-
-    // Call Gemini (with fallback)
-    const geminiBody = JSON.stringify({
-      tools: [{google_search:{}}],
-      contents: [{role:'user', parts:[{text:prompt}]}],
-      generationConfig: { temperature:0.8, maxOutputTokens:16384 }
-    });
     const geminiHeaders = { 'Content-Type':'application/json', 'x-goog-api-key': GEMINI_KEY() };
 
-    let res = await fetch(GEMINI_URL_PRIMARY, { method:'POST', headers:geminiHeaders, body:geminiBody });
+    // STEP 1: Grounded research call — gather live market intelligence
+    const researchPrompt = `Search for current Indian consumer complaints, trending searches, and product gaps for the category: "${cat.label}".
+${trend ? `Focus especially on: "${trend}"` : ''}
+${amazon ? `And Amazon/Nykaa search: "${amazon}"` : ''}
+Find: top Reddit complaints, Amazon 1-star review patterns, Nykaa pricing gaps, Twitter pain points, Google Trends spikes.
+Summarise your findings in 200 words max. Plain text only.`;
+
+    const researchBody = JSON.stringify({
+      tools: [{google_search:{}}],
+      contents: [{role:'user', parts:[{text:researchPrompt}]}],
+      generationConfig: { temperature:0.3, maxOutputTokens:1024 }
+    });
+
+    let researchSummary = '';
+    try {
+      const resRes = await fetch(GEMINI_URL_PRIMARY, { method:'POST', headers:geminiHeaders, body:researchBody });
+      if (resRes.ok) {
+        const resData = await resRes.json();
+        const resParts = resData?.candidates?.[0]?.content?.parts || [];
+        researchSummary = resParts.filter(p=>p.text).map(p=>p.text).join(' ').slice(0, 1500);
+      }
+    } catch { /* proceed without live research */ }
+
+    // STEP 2: Pure JSON generation — no tools, clean output guaranteed
+    const jsonBody = JSON.stringify({
+      contents: [{role:'user', parts:[{text: buildPromptWithResearch(cat.label, redditPosts, trend||cat.trend, amazon||cat.amazon, sampleFileText, researchSummary)}]}],
+      generationConfig: { temperature:0.7, maxOutputTokens:16384 }
+    });
+
+    let res = await fetch(GEMINI_URL_PRIMARY, { method:'POST', headers:geminiHeaders, body:jsonBody });
     if (!res.ok && (res.status === 404 || res.status === 400)) {
-      // Primary model unavailable — try fallback
-      res = await fetch(GEMINI_URL_FALLBACK, { method:'POST', headers:geminiHeaders, body:geminiBody });
+      res = await fetch(GEMINI_URL_FALLBACK, { method:'POST', headers:geminiHeaders, body:jsonBody });
     }
     if (!res.ok) {
       const err = await res.text();
@@ -1571,31 +1607,52 @@ async function startAnalysis() {
 
     const data = await res.json();
     const finishReason = data?.candidates?.[0]?.finishReason;
-    if (finishReason === 'MAX_TOKENS') {
-      throw new Error('Gemini response was truncated (MAX_TOKENS). Try again with fewer/shorter inputs.');
-    }
 
     const parts = data?.candidates?.[0]?.content?.parts || [];
     const raw = parts.filter(p=>p.text).map(p=>p.text).join('');
 
     if (!raw) throw new Error('Empty response from Gemini. Please try again.');
 
-    // Extract JSON
+    // Extract JSON — try full array first, then salvage partial
     let products;
-    const clean = extractJsonArray(raw);
-    if (!clean) throw new Error('Could not parse complete product data. Please try again.');
+    let clean = extractJsonArray(raw);
 
-    try {
-      products = JSON.parse(clean);
-    } catch {
-      const repaired = clean
-        .replace(/[\u0000-\u001F]/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-      products = JSON.parse(repaired);
+    // If full parse fails, try to salvage complete objects from a truncated array
+    if (!clean) {
+      const start = raw.indexOf('[');
+      if (start !== -1) {
+        // Find last complete object by locating last "}," or "}" before end
+        const partial = raw.slice(start);
+        const lastComplete = Math.max(partial.lastIndexOf('},'), partial.lastIndexOf('}\n]'), partial.lastIndexOf('}]'));
+        if (lastComplete !== -1) {
+          const salvaged = partial.slice(0, lastComplete + 1) + ']';
+          try { products = JSON.parse(salvaged); } catch { /* fall through */ }
+        }
+      }
+      if (!products) throw new Error('Could not parse product data. Please try again.');
+    } else {
+      try {
+        products = JSON.parse(clean);
+      } catch {
+        const repaired = clean
+          .replace(/[\u0000-\u001F]/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        products = JSON.parse(repaired);
+      }
     }
 
-    if (!Array.isArray(products)||products.length===0) throw new Error('Invalid response. Please try again.');
+    if (!Array.isArray(products) || products.length === 0) throw new Error('Invalid response. Please try again.');
+
+    // Filter out any placeholder/incomplete objects (must have at least productName and description)
+    products = products.filter(p => p.productName && p.description && typeof p.productName === 'string' && !p.productName.includes('same structure'));
+
+    if (products.length === 0) throw new Error('No valid product concepts returned. Please try again.');
+
+    // Warn if fewer than 5 but still show what we got
+    if (products.length < 5) {
+      showToast(`⚠️ Only ${products.length} concept${products.length > 1 ? 's' : ''} returned — try again for more`);
+    }
 
     // Save
     addEntry(selectedCatId, {
@@ -1609,7 +1666,7 @@ async function startAnalysis() {
     clearInterval(progressInterval);
     setLoading(false);
     closeModal();
-    showToast('✓ 5 product concepts generated!');
+    if (products.length >= 5) showToast('✓ 5 product concepts generated!');
     showCategory(selectedCatId);
 
   } catch(err) {
