@@ -670,65 +670,6 @@ input[type=text]:focus,input[type=url]:focus{
 }
 
 /* ══════════════════════════════════════════════════════
-   API KEY GATE
-══════════════════════════════════════════════════════ */
-#key-gate{
-  position:fixed;inset:0;z-index:9999;
-  background:linear-gradient(135deg,#F7F8FC 0%,#EDE9FE 100%);
-  display:flex;align-items:center;justify-content:center;
-  padding:24px;
-}
-#key-gate.hidden{display:none}
-.gate-card{
-  background:var(--white);
-  border:1px solid var(--border);
-  border-radius:var(--r-xl);
-  box-shadow:var(--shadow-lg);
-  padding:44px 40px;
-  width:100%;max-width:460px;
-  text-align:center;
-}
-.gate-logo{
-  width:52px;height:52px;
-  background:linear-gradient(135deg,var(--violet) 0%,var(--violet-mid) 100%);
-  border-radius:14px;
-  display:flex;align-items:center;justify-content:center;
-  margin:0 auto 22px;
-  box-shadow:var(--shadow-violet);
-}
-.gate-logo span{color:#fff;font-size:17px;font-family:'DM Mono',monospace;font-weight:700}
-.gate-title{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;color:var(--ink);margin-bottom:7px}
-.gate-sub{font-size:14px;color:var(--body);margin-bottom:30px;line-height:1.65}
-.gate-label{display:block;text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);margin-bottom:9px}
-.gate-input{
-  width:100%;border:1.5px solid var(--border);
-  padding:12px 15px;
-  font-family:'DM Mono',monospace;font-size:13px;
-  color:var(--ink);background:var(--surface);
-  outline:none;transition:all .15s;
-  border-radius:var(--r-sm);
-  letter-spacing:.04em;
-  margin-bottom:7px;
-}
-.gate-input:focus{border-color:var(--violet);background:var(--white);box-shadow:0 0 0 3px rgba(124,58,237,.1)}
-.gate-hint{font-size:11px;color:var(--muted);text-align:left;margin-bottom:22px;line-height:1.55}
-.gate-hint a{color:var(--violet);text-decoration:none}
-.gate-hint a:hover{text-decoration:underline}
-.gate-btn{
-  width:100%;background:linear-gradient(135deg,var(--violet) 0%,var(--violet-mid) 100%);color:#fff;border:none;
-  padding:14px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;
-  cursor:pointer;transition:all .18s;border-radius:var(--r-sm);
-  box-shadow:var(--shadow-violet);
-}
-.gate-btn:hover{background:linear-gradient(135deg,var(--violet-dark) 0%,var(--violet) 100%);transform:translateY(-1px);box-shadow:0 6px 20px rgba(124,58,237,.4)}
-.gate-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
-.gate-error{font-size:12px;color:var(--red);margin-top:11px;min-height:18px;font-weight:500}
-.gate-session-note{
-  margin-top:18px;font-size:11px;color:var(--muted);
-  display:flex;align-items:center;justify-content:center;gap:6px;
-}
-
-/* ══════════════════════════════════════════════════════
    RESPONSIVE BREAKPOINTS
 ══════════════════════════════════════════════════════ */
 /* Tablet: 2 columns */
@@ -766,23 +707,6 @@ input[type=text]:focus,input[type=url]:focus{
 </style>
 </head>
 <body>
-
-<!-- ═══════════════════════════════════════ API KEY GATE ════════════════════════════════════════ -->
-<div id="key-gate">
-  <div class="gate-card">
-    <div class="gate-logo"><span>MS</span></div>
-    <div class="gate-title">Mosaic Signal</div>
-    <div class="gate-sub">Your API key powers the live data pipeline.<br>It never leaves your browser — never stored, never shared.</div>
-    <label class="gate-label" for="gate-key-input">Gemini API Key</label>
-    <input class="gate-input" id="gate-key-input" type="password" placeholder="AIza..." autocomplete="off" spellcheck="false"/>
-    <div class="gate-hint">
-      Get a free key at <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a> · Gemini 2.5 Flash required
-    </div>
-    <button class="gate-btn" id="gate-btn" onclick="submitKey()">Unlock Mosaic Signal →</button>
-    <div class="gate-error" id="gate-error"></div>
-    <div class="gate-session-note">🔒 Stored in sessionStorage — cleared when tab closes</div>
-  </div>
-</div>
 
 <!-- ═══════════════════════════════════════ HOME PAGE ═══════════════════════════════════════ -->
 <div id="page-home" class="page active">
@@ -972,7 +896,7 @@ input[type=text]:focus,input[type=url]:focus{
 // ══════════════════════════════════════════════════════
 // CONFIG
 // ══════════════════════════════════════════════════════
-const GEMINI_KEY = () => sessionStorage.getItem('pmind_key') || '';
+const GEMINI_KEY = () => 'AIzaSyBPjilhtynjJb6DyQCwj9azGJl58ZOwHDk';
 const GEMINI_URL_PRIMARY  = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 const GEMINI_URL_FALLBACK = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 const STORAGE_KEY = 'productmind_v2';
@@ -1766,41 +1690,10 @@ function showToast(msg) {
 }
 
 // ══════════════════════════════════════════════════════
-// API KEY GATE
-// ══════════════════════════════════════════════════════
-function submitKey() {
-  const input = document.getElementById('gate-key-input');
-  const errEl = document.getElementById('gate-error');
-  const btn   = document.getElementById('gate-btn');
-  const key   = input.value.trim();
-
-  if (!key.startsWith('AIza') || key.length < 35) {
-    errEl.textContent = 'Keys must start with "AIza" and be at least 35 characters.';
-    input.focus();
-    return;
-  }
-
-  errEl.textContent = '';
-  sessionStorage.setItem('pmind_key', key);
-  document.getElementById('key-gate').classList.add('hidden');
-  renderHome();
-}
-
-// Allow Enter key in the input
-document.getElementById('gate-key-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') submitKey();
-});
-
-// ══════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════
 (function init() {
-  const saved = sessionStorage.getItem('pmind_key');
-  if (saved) {
-    document.getElementById('key-gate').classList.add('hidden');
-    renderHome();
-  }
-  // else: gate stays visible, renderHome called after key entry
+  renderHome();
 })();
 </script>
 </body>
